@@ -1,6 +1,6 @@
 # backend/models/serializers.py
 from rest_framework import serializers
-from .models import User, Collective, MembersOfCollective
+from .models import User, Collective, MembersOfCollective, TelegramLog
 from django.conf import settings
 
 
@@ -8,6 +8,11 @@ from django.conf import settings
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model =  User
+        fields = '__all__'
+
+class TelegramLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =  TelegramLog
         fields = '__all__'
 
 class UserFullSerializer(serializers.ModelSerializer):

@@ -1,8 +1,8 @@
 # backend/models/views.py
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
-from .models import User, Collective, MembersOfCollective
-from .serializers import UserSerializer, CollectiveSerializer, MembersOfCollectiveSerializer, LoginSerializer, UserFullSerializer
+from .models import User, Collective, MembersOfCollective, TelegramLog
+from .serializers import UserSerializer, CollectiveSerializer, MembersOfCollectiveSerializer, LoginSerializer, UserFullSerializer, TelegramLogSerializer
 from rest_framework.permissions import IsAuthenticated
 from djoser.permissions import CurrentUserOrAdmin
 from rest_framework.generics import GenericAPIView
@@ -18,7 +18,8 @@ from django.db import models
 from rest_framework.renderers import JSONRenderer
 import telebot
 from telebot import apihelper
-apihelper.proxy = {"https": "socks5://167.86.121.208:40194"}
+from . import keyboards
+apihelper.proxy = {"https": "socks5://166.62.85.184:31173"}
 
 bot = telebot.TeleBot ("986576341:AAEKIUXGsEj2kLs4DK_JHRMRdg4O6F7fUo4")
 
@@ -32,6 +33,10 @@ def requester(token):
 
 
 
+class TelegramLogViewSet(viewsets.ModelViewSet):
+
+    queryset = TelegramLog.objects.all().order_by('-id')
+    serializer_class = TelegramLogSerializer
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-id')
@@ -40,27 +45,99 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 
-
-
 class TelegramViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-id')
     serializer_class = UserFullSerializer
     # permission_classes = IsAuthenticated,
     @api_view(['POST'])
+    @bot.message_handler(content_types=["text"])
     def printer(request):
-        body_unicode = request.body.decode('utf-8')
-        message = json.loads(body_unicode)["message"]
-        print(message)
-        g1 = User.objects.filter(models.Q(status="4"))
-        g1.order_by("points")
-        # g1 = User.objects.all()
-        resp =""
-        for user in g1:
-            resp+=(user.first_name+ " " + user.last_name + " "+ user.points + "\n")
 
-        if message["text"] == "hi":
-            bot.send_message(message["chat"]["id"], resp)
-        return HttpResponse ("ok")
+
+        body_unicode = request.body.decode('utf-8')
+        print(body_unicode)
+
+        if ('callback_query' in body_unicode):
+            cb = json.loads(body_unicode)["callback_query"]
+
+            if cb["data"]=="logout":
+                TelegramLog.objects.filter(chat_id = cb["message"]["chat"]["id"]).delete()
+                bot.send_message(cb["message"]["chat"]["id"],
+                                 "Logged out from CampAppBot!", reply_markup=keyboards.keyboard_1)
+                return HttpResponse("ok")
+
+
+
+            if cb["data"] == "rating":
+                g1 = User.objects.filter(models.Q(status="4"))
+                g1.order_by("points")
+                resp = "Рейтинг: \n"
+                for user in g1:
+                    resp += (user.first_name + " " + user.last_name + " " + user.points + "\n")
+                bot.send_message(cb["message"]["chat"]["id"], resp)
+                return HttpResponse("ok")
+
+            if cb["data"] == "login":
+                g1 = TelegramLog.objects.filter(models.Q(chat_id=cb["message"]["chat"]["id"]))
+                if len(g1) ==0:
+                    bot.send_message(cb["message"]["chat"]["id"], "You are not logged in. Provide credentials in format\n"
+                                     + "Credentials: <LOGIN> <PASSWORD>")
+                else:
+                    for m in g1:
+
+                        resp = m.t_user.first_name + " " + m.t_user.last_name + "\n" +\
+                           "points: " + m.t_user.points +"\n profile: " + m.t_user.profile
+                        bot.send_message(cb["message"]["chat"]["id"],
+                                     resp, reply_markup=keyboards.keyboard_2)
+
+
+                return HttpResponse("ok")
+
+
+        if ('callback_query' not in body_unicode):
+            message = json.loads(body_unicode)["message"]
+            print(message)
+
+
+            if message["text"].split(" ")[0] == "Credentials:":
+                username = message["text"].split(" ")[1]
+                password = message["text"].split(" ")[2]
+                print(username + " "+ password)
+
+
+                user = authenticate(username=username, password=password)
+                if user == None:
+                    bot.send_message(message["chat"]["id"],
+                                 "No such user")
+                    return HttpResponse("ok")
+
+
+                print(user.first_name)
+                telegramsession = TelegramLog.objects.update_or_create(chat_id=message["chat"]["id"], t_user = user)
+
+                # telegramsession.save()
+
+                # bot.delete_message(message["chat"]["id"], message["message_id"])
+
+
+                resp = user.first_name + " " + user.last_name + "\n" + \
+                       "points: " + user.points + "\n profile: " + user.profile
+                bot.send_message(message["chat"]["id"],
+                                 resp, reply_markup=keyboards.keyboard_1)
+
+
+
+                return HttpResponse("ok")
+
+            if message["text"] == "/start":
+                bot.send_message(message["chat"]["id"],
+                                 "Добро пожаловать в CampAppBot!", reply_markup=keyboards.keyboard_1)
+                return HttpResponse("ok")
+
+
+
+
+
 
 
 

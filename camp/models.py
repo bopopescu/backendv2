@@ -48,6 +48,12 @@ class Collective(models.Model):
         through_fields=('collective', 'user')
     )
 
+class TelegramLog(models.Model):
+    chat_id = models.CharField(max_length=15)
+    t_user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='t_user')
+
+
+
 class MembersOfCollective(models.Model):
     collective = models.ForeignKey(Collective, on_delete=models.CASCADE)
     user = models.ForeignKey( settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
