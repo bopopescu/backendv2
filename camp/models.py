@@ -52,11 +52,32 @@ class TelegramLog(models.Model):
     chat_id = models.CharField(max_length=15)
     t_user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='t_user')
 
+class Plan(models.Model):
+    campsession = models.CharField(max_length=30)
+
+class Event(models.Model):
+    name = models.CharField(max_length=64)
+    base = models.BooleanField(default=False)
+
+
+class Day(models.Model):
+    date = models.DateTimeField()
+    description = models.TextField(default="")
+    id_plan = models.ForeignKey(to=Plan, on_delete=models.CASCADE)
+    events = models.ManyToManyField(
+        Event,
+        through="EventsInDay",
+        through_fields=('day', "event")
+    )
 
 
 class MembersOfCollective(models.Model):
     collective = models.ForeignKey(Collective, on_delete=models.CASCADE)
     user = models.ForeignKey( settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+class EventsInDay(models.Model):
+    day = models.ForeignKey(Day, on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
 
 
 def __str__(self):

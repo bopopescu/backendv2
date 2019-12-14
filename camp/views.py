@@ -1,13 +1,16 @@
 # backend/models/views.py
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
-from .models import User, Collective, MembersOfCollective, TelegramLog
-from .serializers import UserSerializer, CollectiveSerializer, MembersOfCollectiveSerializer, LoginSerializer, UserFullSerializer, TelegramLogSerializer
+from .models import User, Collective, MembersOfCollective, TelegramLog, Plan, Day, Event
+from .serializers import UserSerializer, CollectiveSerializer, MembersOfCollectiveSerializer, LoginSerializer, UserFullSerializer,\
+    TelegramLogSerializer, PlanSerializer, DaySerializer, EventSerializer
+
 from rest_framework.permissions import IsAuthenticated
-from djoser.permissions import CurrentUserOrAdmin
 from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import UpdateModelMixin
 import json
+from datetime import datetime
+from datetime import timedelta
 from django.conf import settings
 from rest_framework.decorators import action
 from django.contrib.auth import authenticate, login
@@ -16,6 +19,7 @@ from rest_framework.decorators import api_view
 from django.db import connection
 from django.db import models
 from rest_framework.renderers import JSONRenderer
+
 import telebot
 from telebot import apihelper
 from . import keyboards
@@ -39,9 +43,13 @@ class TelegramLogViewSet(viewsets.ModelViewSet):
     serializer_class = TelegramLogSerializer
 
 class UserViewSet(viewsets.ModelViewSet):
+    # ISSUE exclude password from qs
     queryset = User.objects.all().order_by('-id')
     serializer_class = UserSerializer
     permission_classes = IsAuthenticated,
+
+    # def retrieve(self, request, *args, **kwargs):
+    #     return self.request.user.only('first_name', 'last_name', "status", "is_staff", "points", "profile")
 
 
 
@@ -232,3 +240,129 @@ class LoginViewSet(viewsets.ViewSet):
             return HttpResponse('Invalid login')
 
         # return Response({'Hello': 'World'})
+
+
+
+class PlanViewSet(viewsets.ViewSet):
+    serializer_class = PlanSerializer
+    queryset = Plan.objects.all().order_by('-id')
+
+    @api_view(['POST'])
+    def create(request):
+        print(request.body)
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
+        start = datetime.strptime(data["start"], '%Y-%m-%dT%H:%M:%S.%fZ')
+        end = datetime.strptime(data["end"], '%Y-%m-%dT%H:%M:%S.%fZ')
+
+        print("++++")
+        print(start)
+        print(end)
+        print("++++")
+        p1 = Plan(campsession=data["campsession"])
+        p1.save()
+        p1.refresh_from_db()
+
+        while((end-start).days >=0):
+
+            print(start)
+            # d1 = Day(date=str(datetime.strftime(start, '%Y-%m-%d %H:%M:%S')), id_plan=p1)
+            # d1 = Day(date=datetime.strftime(start, '%Y-%m-%d %H:%M:%S'), id_plan=p1)
+            d1 = Day(date=start, id_plan=p1)
+            d1.save()
+            start += timedelta(days=1)
+
+        n1 = PlanSerializer(p1)
+        json2 = JSONRenderer().render(n1.data)
+        return HttpResponse(json2)
+
+    @api_view(['GET'])
+    def all(request):
+        print(request.body)
+
+        g1 = Plan.objects.all().order_by("id")
+        n1 = PlanSerializer(g1, many=True)
+        json = JSONRenderer().render(n1.data)
+
+        return HttpResponse(json)
+
+
+    @api_view(['GET'])
+    def get_session_by_day(request, year, month, date):
+        d1 = datetime.strptime(year +"/" + month +"/" + date + " 09" , "%Y/%m/%d %H")
+        print(d1)
+
+        g1 = Day.objects.filter(date=d1)
+        if (len(g1)==0):
+            return HttpResponse("no plans for today")
+        elif (len(g1)==1):
+            plan = g1[0].id_plan
+            g2 = Day.objects.filter(id_plan=plan)
+            n1 = DaySerializer(g2, many=True)
+            json = JSONRenderer().render(n1.data)
+            return HttpResponse(json)
+
+        return HttpResponse("LOl")
+
+    def get_session_by_id(request, pk):
+        print(pk)
+
+        g2 = Day.objects.filter(id_plan=pk)
+        n1 = DaySerializer(g2, many=True)
+        json = JSONRenderer().render(n1.data)
+        return HttpResponse(json)
+
+    @api_view(['POST'])
+    def update_plan(request):
+        print(request.body)
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
+        for day in data:
+            d1 = Day.objects.get(pk=day["id"])
+            d1.description = day["description"]
+            # d1.events.update(day["events"])
+            # d1.save()
+            d1.events.clear()
+            for event in day["events"]:
+                e1 = Event.objects.get(pk=event["id"])
+                d1.events.add(e1)
+            d1.save()
+
+            # serializer = DaySerializer(data=day)
+            # serializer.is_valid()
+            # print(serializer.validated_data)
+            # serializer.validated_data.save()
+            # d1.save()
+        return HttpResponse("hi")
+
+
+
+class EventViewSet(viewsets.ViewSet):
+    serializer_class = EventSerializer
+    queryset = Event.objects.all().order_by('-id')
+
+
+    @api_view(['GET'])
+    def all(request):
+        g1 = Event.objects.filter(base=True).order_by("id")
+        n1 = EventSerializer(g1, many=True)
+        json = JSONRenderer().render(n1.data)
+
+        return HttpResponse(json)
+
+    @api_view(['POST'])
+    def create(request):
+        print(request.body)
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
+
+        e1, created = Event.objects.get_or_create(
+            name=data["name"],
+        )
+        # e1 = Event.(name=data["name"])
+        # e1.save()
+        e1.refresh_from_db()
+        n1 = EventSerializer(e1)
+        json2 = JSONRenderer().render(n1.data)
+
+        return HttpResponse(json2)

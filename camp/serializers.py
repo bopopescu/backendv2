@@ -1,13 +1,13 @@
 # backend/models/serializers.py
 from rest_framework import serializers
-from .models import User, Collective, MembersOfCollective, TelegramLog
+from .models import User, Collective, MembersOfCollective, TelegramLog, Plan, Event, Day
 from django.conf import settings
 
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model =  User
+        model = User
         fields = '__all__'
 
 class TelegramLogSerializer(serializers.ModelSerializer):
@@ -20,11 +20,21 @@ class UserFullSerializer(serializers.ModelSerializer):
         model =  settings.AUTH_USER_MODEL
         fields = ("id", "last_login", "is_superuser", "first_name", "last_name", "email", "is_staff", "is_active",  "date_joined",  "profile", "points", "created_at")
 
-# class ProfileSerializer(serializers.ModelSerializer):
-#
-#     class Meta:
-#         model = Profile
-#         fields = '__all__'
+class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = '__all__'
+
+class EventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = '__all__'
+
+class DaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Day
+        fields = '__all__'
+        depth = 1
 
 
 class CollectiveSerializer(serializers.ModelSerializer):
@@ -32,8 +42,6 @@ class CollectiveSerializer(serializers.ModelSerializer):
 
         model = Collective
         fields = '__all__'
-        # fields = ("name", "blockname", "description", "private", "id_user", "created_at", "members")
-        # depth = 1
 
 
 class MembersOfCollectiveSerializer(serializers.ModelSerializer):
