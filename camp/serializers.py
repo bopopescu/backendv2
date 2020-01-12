@@ -17,8 +17,10 @@ class TelegramLogSerializer(serializers.ModelSerializer):
 
 class UserFullSerializer(serializers.ModelSerializer):
     class Meta:
-        model =  settings.AUTH_USER_MODEL
-        fields = ("id", "last_login", "is_superuser", "first_name", "last_name", "email", "is_staff", "is_active",  "date_joined",  "profile", "points", "created_at")
+        # model =  settings.AUTH_USER_MODEL
+        model = User
+        fields = ('id', 'first_name', 'last_name', "status", "points", "profile")
+        # fields = ("id", "is_superuser", "first_name", "last_name", "email", "is_staff", "is_active",  "date_joined",  "profile", "points", "created_at")
 
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:

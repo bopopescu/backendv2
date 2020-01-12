@@ -23,10 +23,12 @@ from rest_framework.renderers import JSONRenderer
 import telebot
 from telebot import apihelper
 from . import keyboards
-apihelper.proxy = {"https": "socks5://166.62.85.184:31173"}
+apihelper.proxy = {"https": "socks5://5.133.214.88:39593"}
 
-bot = telebot.TeleBot ("986576341:AAEKIUXGsEj2kLs4DK_JHRMRdg4O6F7fUo4")
+bot = telebot.TeleBot ("986576341:AAEV01K9Bvi6zqLuwCQP8Vv7QsEngVT0g5k")
 
+from PIL import Image
+import base64
 
 def requester(token):
     with connection.cursor() as cursor:
@@ -48,8 +50,19 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = IsAuthenticated,
 
-    # def retrieve(self, request, *args, **kwargs):
-    #     return self.request.user.only('first_name', 'last_name', "status", "is_staff", "points", "profile")
+    def list(self, request, *args, **kwargs):
+        q = User.objects.all().values('id', 'first_name', 'last_name', "status", "is_staff", "points", "profile")
+        for g in q:
+            print(g)
+            # data = UserSerializer.serialize('xml', Som, fields=('name', 'size'))
+        n1 = UserFullSerializer(q, many=True)
+
+        json2 = JSONRenderer().render(n1.data)
+        print(json2);
+        return HttpResponse(json2)
+        # jsony = JSONRenderer().render(n1.data)
+        # return HttpResponse(jsony)
+        # return self.request.user.values('first_name', 'last_name', "status", "is_staff", "points", "profile")
 
 
 
@@ -154,8 +167,8 @@ class TelegramViewSet(viewsets.ModelViewSet):
 class UserPartialUpdateView(GenericAPIView, UpdateModelMixin):
 
     queryset =  User.objects.all()
-    serializer_class = UserSerializer
-    # permission_classes = CurrentUserOrAdmin
+    serializer_class = UserFullSerializer
+    permission_classes = IsAuthenticated,
 
     def put(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
@@ -204,6 +217,7 @@ class CollectiveViewSet(viewsets.ModelViewSet):
         g1 = Collective.objects.filter(models.Q(id_user=user) | models.Q(private=False))
         n1 = CollectiveSerializer(g1, many=True)
         json = JSONRenderer().render(n1.data)
+
         return HttpResponse(json)
 
 
@@ -324,7 +338,8 @@ class PlanViewSet(viewsets.ViewSet):
             # d1.save()
             d1.events.clear()
             for event in day["events"]:
-                e1 = Event.objects.get(pk=event["id"])
+                print(event)
+                e1 = Event.objects.get(name=event["name"])
                 d1.events.add(e1)
             d1.save()
 
@@ -366,3 +381,35 @@ class EventViewSet(viewsets.ViewSet):
         json2 = JSONRenderer().render(n1.data)
 
         return HttpResponse(json2)
+
+class ImageProcessViewSet(viewsets.ViewSet):
+
+    @api_view(['POST'])
+    def watermark(request):
+        # print(request.body)
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
+        text = (str(data['img']).split("base64")[1])
+        image_result = open('camp/assets/dec.jpeg', 'wb')
+        image_result.write(base64.b64decode(text))
+        image_result.close()
+
+        # image_result.write(base64.b64decode(data['img']))
+        base_image = Image.open("camp/assets/dec.jpeg").convert("RGBA")
+        watermark = Image.open("camp/assets/logo.png").convert("RGBA")
+
+        width, height = base_image.size
+        position = (0, 0)
+
+
+        transparent = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+        transparent.paste(base_image, (0, 0))
+        transparent.paste(watermark, position, mask=watermark)
+        # transparent.show()
+        transparent.save('camp/assets/done.png')
+
+        with open('camp/assets/done.png', "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+        print(encoded_string);
+
+        return JsonResponse({"watermarked":"data:image/png;base64,"+ str(encoded_string).split("'")[1]})

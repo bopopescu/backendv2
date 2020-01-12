@@ -21,11 +21,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '$e+a$7y-h36xva5gfn$5h0f4p^=i*f3oh-4z9@c!6hbh7ipn6u'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["ecdb45f7.ngrok.io", "localhost"]
+ALLOWED_HOSTS = ["42d41bb2.ngrok.io", "127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -85,9 +84,9 @@ WSGI_APPLICATION = 'backendv2.wsgi.application'
 DATABASES = {
         'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'camp2',
+        'NAME': 'camp',
         'USER': 'root',
-        'PASSWORD': 'cisco',
+        'PASSWORD': 'root',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }

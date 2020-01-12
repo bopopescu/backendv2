@@ -4,7 +4,7 @@ from rest_framework import routers
 
 
 from .views import UserViewSet, CollectiveViewSet, MembersOfCollectiveViewSet, LoginViewSet, UserPartialUpdateView,\
-    TelegramViewSet, PlanViewSet, EventViewSet
+    TelegramViewSet, PlanViewSet, EventViewSet, ImageProcessViewSet
 
 # Создаем router и регистрируем наш ViewSet
 router = routers.DefaultRouter()
@@ -30,4 +30,5 @@ urlpatterns = [
     url(r'^plan/update/', PlanViewSet.update_plan, name='qq'),
     url(r'^event/all', EventViewSet.all, name='all'),
     url(r'^event/new/', EventViewSet.create, name='create'),
+    url(r'^watermark/', ImageProcessViewSet.watermark, name='create'),
 ]
