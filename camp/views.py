@@ -29,6 +29,10 @@ bot = telebot.TeleBot ("986576341:AAEV01K9Bvi6zqLuwCQP8Vv7QsEngVT0g5k")
 
 from PIL import Image
 import base64
+import os
+# import cv2
+# import numpy as np
+
 
 def requester(token):
     with connection.cursor() as cursor:
@@ -398,9 +402,15 @@ class ImageProcessViewSet(viewsets.ViewSet):
         base_image = Image.open("camp/assets/dec.jpeg").convert("RGBA")
         watermark = Image.open("camp/assets/logo.png").convert("RGBA")
 
-        width, height = base_image.size
-        position = (0, 0)
 
+        width, height = base_image.size
+        widthW, heightW = watermark.size
+
+        koef = 5
+
+        newsize = (round(width/koef), round(heightW/(widthW/round(width/koef))))
+        watermark = watermark.resize(newsize)
+        position = (round(0.98*width-newsize[0]), round(0.98*height-newsize[1]))
 
         transparent = Image.new('RGBA', (width, height), (0, 0, 0, 0))
         transparent.paste(base_image, (0, 0))
@@ -409,7 +419,36 @@ class ImageProcessViewSet(viewsets.ViewSet):
         transparent.save('camp/assets/done.png')
 
         with open('camp/assets/done.png', "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read())
-        print(encoded_string);
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        # print(encoded_string);
+        # os.remove('camp/assets/done.png')
+        # os.remove('camp/assets/dec.jpeg')
 
-        return JsonResponse({"watermarked":"data:image/png;base64,"+ str(encoded_string).split("'")[1]})
+
+        # EXTRA WAY
+
+        # watermark = cv2.imread('camp/assets/logo.png', cv2.IMREAD_UNCHANGED)
+        # (wH, wW) = watermark.shape[:2]
+        #
+        # (B, G, R, A) = cv2.split(watermark)
+        # B = cv2.bitwise_and(B, B, mask=A)
+        # G = cv2.bitwise_and(G, G, mask=A)
+        # R = cv2.bitwise_and(R, R, mask=A)
+        # watermark = cv2.merge([B, G, R, A])
+        #
+        # image = cv2.imread('camp/assets/dec.jpeg')
+        # (h, w) = image.shape[:2]
+        # image = np.dstack([image, np.ones((h, w), dtype="uint8") * 255])
+        #
+        #
+        # overlay = np.zeros((h, w, 4), dtype="uint8")
+        # overlay[h - wH - 10:h - 10, w - wW - 10:w - 10] = watermark
+        #
+        # # blend the two images together using transparent overlays
+        # output = image.copy()
+        # cv2.addWeighted(overlay, 1, output, 1.0, 0, output)
+        # cv2.imwrite('camp/assets/done.png', output)
+
+
+        return JsonResponse({"watermarked": "data:image/png;base64,"+ str(encoded_string)})
+

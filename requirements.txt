@@ -1,3 +1,4 @@
+cv2
 Django==3.0.2
 djangorestframework==3.11.0
 pyTelegramBotAPI==3.6.6
