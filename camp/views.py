@@ -175,7 +175,32 @@ class UserPartialUpdateView(GenericAPIView, UpdateModelMixin):
     permission_classes = IsAuthenticated,
 
     def put(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
+
+        token = request.headers["Authorization"].split()[1]
+        r_user = requester(token)
+
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
+        # keys = data.keys
+        print(data.keys())
+        keys = data.keys()
+        try:
+            if 'points' in keys:
+                user = User.objects.get(pk=data['id'])
+                if len(keys) == 2 and ("id" in keys) and ('points' in keys):
+                    file = open('camp/assets/points-log.txt',"a+")
+                    file.write(r_user.first_name+ " " +r_user.last_name+": "+ str(float(data['points'])- float(user.points))+" to "+ user.first_name+ " " +user.last_name+
+                        " via Quick Actions \n")
+                    file.close()
+                else:
+                    file = open('camp/assets/points-log.txt',"a+")
+                    file.write(r_user.first_name + " " + r_user.last_name + ": " + str(
+                        float(data['points']) - float(user.points)) + " to " + user.first_name + " " + user.last_name +
+                          " via Editing \n")
+                    file.close()
+        finally:
+            return self.partial_update(request, *args, **kwargs)
+
 
     @api_view(['POST'])
     def group_points_update(request):
@@ -421,8 +446,8 @@ class ImageProcessViewSet(viewsets.ViewSet):
         with open('camp/assets/done.png', "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         # print(encoded_string);
-        # os.remove('camp/assets/done.png')
-        # os.remove('camp/assets/dec.jpeg')
+        os.remove('camp/assets/done.png')
+        os.remove('camp/assets/dec.jpeg')
 
 
         # EXTRA WAY
